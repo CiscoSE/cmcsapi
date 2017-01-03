@@ -1,0 +1,4 @@
+[application]
+username: {USERNAME for CMCS SERVER}
+password: {PASSWORD for CMCS SERVER}
+cmcs_ip: {IP ADDRESS for CMCS SERVER}
