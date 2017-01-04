@@ -1,11 +1,10 @@
 import requests
 from requests.auth import HTTPBasicAuth
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from ConfigParser import SafeConfigParser
 import xml.etree.ElementTree as ET
 from collections import defaultdict
-import os
-import json
-import string
+
 
 
 print "CMCS API Testing"
@@ -19,6 +18,9 @@ cfg = SafeConfigParser()
 cfg.read(CONFIG_FILE)
 
 # Read the application specific paramters
+
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning
+                                           )
 try:
     username = cfg.get("application","username")
     password = cfg.get("application","password")
@@ -31,21 +33,23 @@ print "Username: "+username
 print "CMCS Server: "+cmcs_ip
 
 
-print "Logging into CMCS @ "+cmcs_ip+ " using userid: " + username
+print "\nLogging into CMCS @ "+cmcs_ip+ " using userid: " + username
 
 # Create the URL to request the client_credentials or token from the CMCS Server
 URL='https://'+cmcs_ip+':8001/nccmws/api/v1/Token?grant-type=client_credentials'
 
-ret=requests.get(URL, verify=False, auth=HTTPBasicAuth(username, password))
+try:
+    ret=requests.get(URL, verify=False, auth=HTTPBasicAuth(username, password))
+except:
 
-print "Return of get token: "
-print ret
+    print "Unable to connect to CMCS Server "+cmcs_ip+" to get Client Credentials"
+    exit()
 
 # Parse out the access token for the remaining queries
 access_token = ret.content
 at = access_token.split(" ")[1]
 
-print "Access Token received: "+ at
+print "\nClient Credentials Access Token received: "+ at
 
 # Setup the XML Query to request the GetDevices function from the CMCS Server
 
@@ -62,15 +66,16 @@ xmlreq = """<?xml version="1.0" encoding="UTF-8"?>
 
 
 req="request="+xmlreq
-print "Requesting an API Call using: " + xmlreq
+
 
 URL='https://'+cmcs_ip+':8001/nccmws/api/v1/Request'
 
-ret=requests.post(URL, verify=False, headers=payload, data=req )
+try:
+    ret=requests.post(URL, verify=False, headers=payload, data=req )
+except:
+    print "Unable to communicate to CMCS to post data."
+    exit()
 
-
-print "Content Recevied: "
-print ret.content
 
 count = 0
 database =[]
@@ -95,7 +100,7 @@ for elem in root.getiterator(tag='Device'):
 
 # Display the summary of the data.
 
-print '{0:40} {1}'.format("PART NUMBER","COUNT")
+print '\n{0:40} {1}'.format("PART NUMBER","COUNT")
 print '{0:40} {1}'.format("---------------------------------------","-----")
 for info in sorted(d):
     print '{0:40} {1}'.format(info,d[info])
